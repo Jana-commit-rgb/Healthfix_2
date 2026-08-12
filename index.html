@@ -86,7 +86,7 @@
         </div>
     </div>
 
-    <!-- AUTH MODAL (نافذة التسجيل) -->
+    <!-- AUTH MODAL -->
     <div id="authModal" class="fixed inset-0 bg-[#1c334e]/70 flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-lg my-auto relative border border-slate-200">
             <button onclick="closeAuthModal()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
@@ -123,6 +123,7 @@
                         <option>المستشفى الرئيسي</option>
                         <option>مستشفى المركز الطبي</option>
                         <option>مستشفى التخصصي</option>
+                        <option>مستشفى السلام الدولي</option>
                     </select>
                 </div>
                 <button type="submit" class="w-full bg-[#1c334e] text-white py-3 rounded-xl font-bold hover:bg-[#15273c] transition shadow">دخول لوحة تحكم الطبيب</button>
@@ -180,6 +181,7 @@
                     <button onclick="switchDoctorTab('ratings')" id="docTabRatingsBtn" class="px-3 py-1.5"><i class="fa-solid fa-star ml-1"></i>تقييمات المرضى</button>
                     <button onclick="switchDoctorTab('requests')" id="docTabRequestsBtn" class="px-3 py-1.5"><i class="fa-solid fa-clipboard-list ml-1"></i>طلبات الكشف</button>
                     <button onclick="switchDoctorTab('peakHours')" id="docTabPeakBtn" class="px-3 py-1.5"><i class="fa-solid fa-clock ml-1"></i>فترات الذروة</button>
+                    <button onclick="switchDoctorTab('jobs')" id="docTabJobsBtn" class="px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg"><i class="fa-solid fa-briefcase ml-1"></i>فرص عمل المستشفيات</button>
                 </div>
 
                 <!-- Doctor Tab 1: Chat -->
@@ -225,6 +227,14 @@
                         <div id="hospitalsPeakContainer" class="grid grid-cols-1 gap-3"></div>
                     </div>
                 </div>
+
+                <!-- NEW Doctor Tab 6: Hospital Jobs / Staff Needed -->
+                <div id="docSectionJobs" class="flex-1 p-6 overflow-y-auto hidden">
+                    <div class="max-w-2xl mx-auto space-y-3">
+                        <h3 class="font-bold text-[#1c334e]"><i class="fa-solid fa-[#1c334e] fa-user-doctor text-emerald-600 ml-1"></i>المستشفيات التي تطلب أطباء وعاملين (وظائف ونبطشيات)</h3>
+                        <div id="hospitalJobsContainer" class="space-y-3"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -235,13 +245,14 @@
                 <button onclick="switchPatientTab('chat')" id="patTabChatBtn" class="px-3 py-1.5"><i class="fa-solid fa-comments ml-1"></i>المحادثة</button>
                 <button onclick="switchPatientTab('instructions')" id="patTabInstBtn" class="px-3 py-1.5"><i class="fa-solid fa-notes-medical ml-1"></i>إرشادات الطبيب</button>
                 <button onclick="switchPatientTab('pharmacy')" id="patTabPharmBtn" class="px-3 py-1.5"><i class="fa-solid fa-pills ml-1"></i>الصيدلية</button>
+                <button onclick="switchPatientTab('cart')" id="patTabCartBtn" class="px-3 py-1.5 relative text-emerald-700 bg-emerald-50 rounded-lg"><i class="fa-solid fa-shopping-cart ml-1"></i>سلة الأدوية (<span id="cartCountBadge">0</span>)</button>
                 <button onclick="switchPatientTab('transport')" id="patTabTransBtn" class="px-3 py-1.5"><i class="fa-solid fa-ambulance ml-1"></i>المواصلات بالإسعاف</button>
                 <button onclick="switchPatientTab('rating')" id="patTabRatingBtn" class="px-3 py-1.5"><i class="fa-solid fa-star ml-1"></i>تقييم الخدمة</button>
             </div>
 
             <!-- Patient Tab 1: Doctors Directory -->
             <div id="patSectionDoctorsList" class="flex-1 p-6 overflow-y-auto">
-                <div class="max-w-2xl mx-auto space-y-3">
+                <div class="max-w-3xl mx-auto space-y-3">
                     <h3 class="font-bold text-[#1c334e]">اختر طبيباً لبدء الكشف والاستشارة</h3>
                     <div id="doctorsCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                 </div>
@@ -261,23 +272,69 @@
                 <div id="patientInstructionsDisplay" class="max-w-xl mx-auto bg-white p-6 rounded-xl border shadow-sm"></div>
             </div>
 
-            <!-- Patient Tab 4: Pharmacy -->
+            <!-- Patient Tab 4: Pharmacy WITH MEDICINE IMAGE SEARCH & INQUIRIES -->
             <div id="patSectionPharmacy" class="flex-1 p-6 overflow-y-auto hidden">
                 <div class="max-w-xl mx-auto bg-white p-6 rounded-xl border shadow-sm space-y-4">
-                    <h3 class="font-bold text-[#1c334e]"><i class="fa-solid fa-pills text-emerald-600 ml-1"></i>طلب أدوية من الصيدلية الإلكترونية</h3>
-                    <input type="text" class="w-full border p-2 rounded text-sm" placeholder="ابحث عن دواء بالاسم...">
+                    <h3 class="font-bold text-[#1c334e]"><i class="fa-solid fa-pills text-emerald-600 ml-1"></i>طلب أدوية واستفسارات الصيدلية</h3>
+                    
+                    <!-- البحث السريع برؤية صورة الدواء -->
+                    <div class="relative">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ابحث باسم الدواء لرؤية الصورة والسعر:</label>
+                        <input type="text" id="medicineSearchInput" oninput="searchMedicine()" class="w-full border p-2.5 rounded-lg text-sm" placeholder="اكتب اسم الدواء (مثال: بنادول، أوجمنتين، كونكور)...">
+                        
+                        <div id="medicineResultCard" class="mt-3 p-4 border rounded-xl bg-slate-50 hidden">
+                            <div class="flex items-center space-x-4 space-x-reverse">
+                                <img id="medicineImg" src="" alt="صورة الدواء" class="w-24 h-24 object-cover rounded-lg border shadow-sm">
+                                <div>
+                                    <h4 id="medicineName" class="font-bold text-base text-[#1c334e]"></h4>
+                                    <p id="medicineDesc" class="text-xs text-slate-500 mt-1"></p>
+                                    <span id="medicinePrice" class="inline-block mt-2 font-bold text-emerald-600 text-sm bg-emerald-100 px-2.5 py-0.5 rounded-full"></span>
+                                </div>
+                            </div>
+                            <button id="addToCartBtn" onclick="addToCartFromSearch()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-xs font-bold transition">حجز وإضافة للسلة 🛒</button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- NEW: قسم الاستفسار والمعلومات عن الأدوية -->
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-2">
+                        <h4 class="font-bold text-xs text-[#1c334e]"><i class="fa-solid fa-circle-question text-blue-600 ml-1"></i>اسأل عن أي دواء والمعلومات الطبية عنه:</h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="drugInquiryInput" class="flex-1 border p-2 rounded text-xs bg-white" placeholder="اكتب اسم الدواء للاستفسار عن دواعي الاستعمال...">
+                            <button onclick="askDrugInfo()" class="bg-[#1c334e] text-white px-3 py-1.5 rounded text-xs font-bold">عرض التفاصيل</button>
+                        </div>
+                        <div id="drugInfoDisplay" class="text-xs text-slate-700 mt-2 bg-white p-3 rounded border hidden"></div>
+                    </div>
+
+                    <hr>
+
+                    <!-- رفع صورة الروشتة -->
                     <div class="border-2 border-dashed border-slate-300 p-6 text-center rounded-xl bg-slate-50">
-                        <p class="text-xs text-slate-500 mb-2 font-bold">رفع صورة الروشتة لتجهيز العلاج تلقائياً</p>
+                        <p class="text-xs text-slate-500 mb-2 font-bold">أو قم برفع صورة الروشتة لتنفيذ الطلب</p>
                         <input type="file" id="pharmacyFileInput" class="hidden">
                         <button onclick="document.getElementById('pharmacyFileInput').click()" class="bg-[#1c334e] text-white px-4 py-2 rounded-lg text-xs font-bold">اختيار صورة الروشتة</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Patient Tab 5: Transport -->
+            <!-- NEW Patient Tab 5: Shopping Cart (سلة الأدوية المحجوزة) -->
+            <div id="patSectionCart" class="flex-1 p-6 overflow-y-auto hidden">
+                <div class="max-w-xl mx-auto bg-white p-6 rounded-xl border shadow-sm space-y-4">
+                    <h3 class="font-bold text-[#1c334e]"><i class="fa-solid fa-shopping-cart text-emerald-600 ml-1"></i>سلة الأدوية المحجوزة</h3>
+                    <div id="cartItemsContainer" class="divide-y divide-slate-100"></div>
+                    <div class="border-t pt-3 flex justify-between items-center font-bold text-sm text-[#1c334e]">
+                        <span>الإجمالي:</span>
+                        <span id="cartTotalPrice" class="text-emerald-600 font-bold text-base">0 ج.م</span>
+                    </div>
+                    <button onclick="confirmCartOrder()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-sm shadow transition">تأكيد طلب الأدوية والتوصيل</button>
+                </div>
+            </div>
+
+            <!-- Patient Tab 6: Transport -->
             <div id="patSectionTransport" class="flex-1 p-6 overflow-y-auto hidden">
                 <div class="max-w-xl mx-auto space-y-3">
-                    <h3 class="font-bold text-[#1c334e]"><i class="fa-solid fa-[#1c334e] fa-truck-medical text-rose-600 ml-1"></i>الإسعاف والمواصلات الطبية</h3>
+                    <h3 class="font-bold text-[#1c334e]"><i class="fa-solid fa-truck-medical text-rose-600 ml-1"></i>الإسعاف والمواصلات الطبية</h3>
                     <div class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center">
                         <div>
                             <h4 class="font-bold text-sm text-[#1c334e]">طلب إسعاف عاجل</h4>
@@ -288,7 +345,7 @@
                 </div>
             </div>
 
-            <!-- Patient Tab 6: Rating -->
+            <!-- Patient Tab 7: Rating -->
             <div id="patSectionRating" class="flex-1 p-6 overflow-y-auto hidden">
                 <div class="max-w-md mx-auto bg-white p-6 rounded-xl border space-y-3 text-center shadow-sm">
                     <h3 class="font-bold text-[#1c334e]">تقييم الخدمة الطبية</h3>
@@ -324,15 +381,39 @@
         let currentUser = null;
         let activeRoomId = "room_live_chat";
         let patientRatingVal = 0;
+        let currentSelectedDrug = null;
+        let cartList = [];
 
-        let casesList = [
-            { id: 1, patientName: "حالة مريض (1)", age: 30, symptoms: "أعراض عامة وإرهاق بحاجة للمتابعة." }
+        // قائمة موسعة للأدوية
+        const medicinesDb = [
+            { name: "بنادول", desc: "مسكن للآلام وخافض للحرارة", price: 35, usage: "قرص كل 8 ساعات عند اللزوم بعد الأكل.", sideEffects: "قد يسبب خمول خفيف نادراً.", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300" },
+            { name: "أوجمنتين", desc: "مضاد حيوي واسع المجال", price: 90, usage: "قرص كل 12 ساعة لمدة 7 أيام متواصلة.", sideEffects: "قد يسبب اضطرابات خفيفة بالمعدة.", img: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300" },
+            { name: "فيتامين سي", desc: "مقوي للمناعة ومضاد للأكسدة", price: 50, usage: "قرص فوار يومياً على نصف كوب ماء.", sideEffects: "آمن تماماً مع الالتزام بالجرعة.", img: "https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=300" },
+            { name: "أسبيرين", desc: "مسكن ومسيّل للدم", price: 25, usage: "قرص يومياً بعد الوجبة الرئيسية.", sideEffects: "يُحظر استخدامه على معدة فارغة.", img: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=300" },
+            { name: "كونكور", desc: "لعلاج ضغط الدم وتنظيم ضربات القلب", price: 65, usage: "قرص صباحاً حسب إرشادات الطبيب.", sideEffects: "بطء في النبض في البداية.", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300" },
+            { name: "جلوكوفاج", desc: "لتنظيم مستوى السكر في الدم", price: 40, usage: "قرص مع الوجبات الرئيسية.", sideEffects: "إحساس بالشبع وامتلاء المعدة.", img: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=300" }
         ];
 
+        // قائمة الحالات الموسعة
+        let casesList = [
+            { id: 1, patientName: "محمد السيد", age: 45, symptoms: "ارتفاع في ضغط الدم وضيق تنفس خفيف." },
+            { id: 2, patientName: "سارة محمود", age: 28, symptoms: "التهاب بالحلق وحرارة 38.5 درجة." },
+            { id: 3, patientName: "خالد عبد الرحمن", age: 60, symptoms: "متابعة مستوى السكر والروشتة الأسبوعية." }
+        ];
+
+        // قائمة الأطباء الموسعة
         let doctorsList = [
             { id: 101, name: "د. أحمد سامي", spec: "استشاري الباطنة والشرايين", rating: "4.9", hospital: "المستشفى الرئيسي" },
             { id: 102, name: "د. منى زكي", spec: "أخصائية أطفال وحديثي الولادة", rating: "4.8", hospital: "مستشفى المركز الطبي" },
-            { id: 103, name: "د. خليل إبراهيم", spec: "استشاري العظام والمفاصل", rating: "4.7", hospital: "مستشفى التخصصي" }
+            { id: 103, name: "د. خليل إبراهيم", spec: "استشاري العظام والمفاصل", rating: "4.7", hospital: "مستشفى التخصصي" },
+            { id: 104, name: "د. رانيا يوسف", spec: "استشاري أمراض القلب والاوعية", rating: "4.9", hospital: "مستشفى السلام الدولي" }
+        ];
+
+        // بيانات وظائف المستشفيات
+        let hospitalJobsData = [
+            { hospital: "المستشفى الرئيسي", title: "مطلوب دكاترة نطبشية باطنة وطوارئ", shift: "نبطشيات مسائية (12 ساعة)", salary: "بدل نوبتجية مجزي + سكن" },
+            { hospital: "مستشفى المركز الطبي", title: "مطلوب أخصائي أطفال مقيم", shift: "دوام كامل / دوام جزئي", salary: "راتب ثابت وحوافز حالات" },
+            { hospital: "مستشفى السلام الدولي", title: "مطلوب تمريض وعاملين رعاية مركزة", shift: "نبطشيات متغيرة", salary: "عقد سنوي وتأمين شامل" }
         ];
 
         let hospitalsData = [
@@ -397,7 +478,6 @@
             document.getElementById('userWelcome').textContent = `المريض: ${name} (${age} سنة)`;
             document.getElementById('hospitalBadge').textContent = 'المستشفى الرئيسي';
 
-            // مسح كل البيانات فوراً عند تسجيل أي مريض جديد
             database.ref('chats/' + activeRoomId).remove();
             database.ref('medical_instructions/' + activeRoomId).remove();
             database.ref('ratings').remove();
@@ -419,37 +499,142 @@
             else listenForPatientInstructions();
         }
 
-        /* --- وظائف الدكتور --- */
+        /* --- البحث عن الأدوية وسلة التسوق --- */
+        function searchMedicine() {
+            const query = document.getElementById('medicineSearchInput').value.trim().toLowerCase();
+            const resultCard = document.getElementById('medicineResultCard');
+
+            if(!query) {
+                resultCard.classList.add('hidden');
+                return;
+            }
+
+            const found = medicinesDb.find(m => m.name.toLowerCase().includes(query));
+
+            if(found) {
+                currentSelectedDrug = found;
+                document.getElementById('medicineImg').src = found.img;
+                document.getElementById('medicineName').textContent = found.name;
+                document.getElementById('medicineDesc').textContent = found.desc;
+                document.getElementById('medicinePrice').textContent = found.price + " ج.م";
+                resultCard.classList.remove('hidden');
+            } else {
+                resultCard.classList.add('hidden');
+            }
+        }
+
+        function addToCartFromSearch() {
+            if(!currentSelectedDrug) return;
+            cartList.push(currentSelectedDrug);
+            updateCartUI();
+            alert(`تمت إضافة ${currentSelectedDrug.name} إلى سلة الأدوية!`);
+        }
+
+        function updateCartUI() {
+            document.getElementById('cartCountBadge').textContent = cartList.length;
+            const container = document.getElementById('cartItemsContainer');
+            container.innerHTML = '';
+            let total = 0;
+
+            if(cartList.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">سلة الأدوية فارغة حالياً.</p>';
+            } else {
+                cartList.forEach((item, index) => {
+                    total += item.price;
+                    container.innerHTML += `
+                        <div class="py-3 flex justify-between items-center text-xs">
+                            <div class="flex items-center space-x-3 space-x-reverse">
+                                <img src="${item.img}" class="w-10 h-10 object-cover rounded border">
+                                <div><b>${item.name}</b><p class="text-slate-500">${item.desc}</p></div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold text-emerald-600">${item.price} ج.م</span>
+                                <button onclick="removeFromCart(${index})" class="text-rose-600 hover:text-rose-800 font-bold"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                });
+            }
+            document.getElementById('cartTotalPrice').textContent = total + " ج.م";
+        }
+
+        function removeFromCart(index) {
+            cartList.splice(index, 1);
+            updateCartUI();
+        }
+
+        function confirmCartOrder() {
+            if(cartList.length === 0) return alert('السلة فارغة!');
+            alert('تم تأكيد طلبك بنجاح! سيتم توصيل الأدوية لعنوانك قريباً.');
+            cartList = [];
+            updateCartUI();
+        }
+
+        /* --- الاستفسار والمعلومات الطبية عن الدواء --- */
+        function askDrugInfo() {
+            const query = document.getElementById('drugInquiryInput').value.trim().toLowerCase();
+            const display = document.getElementById('drugInfoDisplay');
+            if(!query) return alert('اكتب اسم الدواء للاستفسار');
+
+            const found = medicinesDb.find(m => m.name.toLowerCase().includes(query));
+            if(found) {
+                display.innerHTML = `
+                    <div class="space-y-1">
+                        <b class="text-[#1c334e] block text-sm">اسم الدواء: ${found.name} (${found.desc})</b>
+                        <p><b>طريقة الاستخدام:</b> ${found.usage}</p>
+                        <p><b>الآثار الجانبية والملاحظات:</b> ${found.sideEffects}</p>
+                    </div>`;
+                display.classList.remove('hidden');
+            } else {
+                display.innerHTML = '<p class="text-rose-600">عفواً، الدواء غير مسجل بالقائمة حالياً. تواصل مع الطبيب مباشرة من تبويب المحادثة.</p>';
+                display.classList.remove('hidden');
+            }
+        }
+
+        /* --- وظائف الطبيب --- */
         function renderDoctorViews() {
-            // قائمة الحالات الجانبية
             const sb = document.getElementById('leftSidebarList');
             sb.innerHTML = '';
             casesList.forEach(c => {
-                sb.innerHTML += `<div class="p-3 bg-slate-100 border-r-4 border-[#1c334e]"><div class="font-bold text-xs">${c.patientName}</div><div class="text-[10px] text-slate-500">${c.symptoms}</div></div>`;
+                sb.innerHTML += `<div class="p-3 bg-slate-100 border-r-4 border-[#1c334e]"><div class="font-bold text-xs">${c.patientName} (${c.age} سنة)</div><div class="text-[10px] text-slate-500">${c.symptoms}</div></div>`;
             });
 
-            // طلبات الكشف
             document.getElementById('patientRequestsContainer').innerHTML = `
                 <div class="bg-white p-3 rounded border text-xs flex justify-between items-center">
-                    <div><b>محمد علي (42 سنة)</b><p class="text-slate-500">آلام بالبطن وحرارة مرتفعة</p></div>
-                    <button onclick="switchDoctorTab('chat')" class="bg-[#1c334e] text-white px-3 py-1 rounded">قبول الاستشارة</button>
+                    <div><b>سامي عبد الله (34 سنة)</b><p class="text-slate-500">حالة كشف جديد - استشارة باطنة</p></div>
+                    <button onclick="switchDoctorTab('chat')" class="bg-[#1c334e] text-white px-3 py-1 rounded">قبول الكشف</button>
                 </div>`;
 
-            // فترات الذروة
             const pk = document.getElementById('hospitalsPeakContainer');
             pk.innerHTML = '';
             hospitalsData.forEach(h => {
                 pk.innerHTML += `<div class="bg-white p-3 rounded border text-xs"><div class="font-bold text-[#1c334e]">${h.name}</div><div class="text-rose-600 font-bold">${h.level}</div><div>نسبة الإشغال: ${h.occupancy}</div></div>`;
             });
+
+            // عرض فرص العمل للمستشفيات
+            const jobsContainer = document.getElementById('hospitalJobsContainer');
+            jobsContainer.innerHTML = '';
+            hospitalJobsData.forEach(j => {
+                jobsContainer.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border shadow-sm space-y-2 text-xs">
+                        <div class="flex justify-between items-center">
+                            <b class="text-sm text-[#1c334e]">${j.hospital}</b>
+                            <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">مطلوب فوراً</span>
+                        </div>
+                        <p class="font-bold text-slate-700">${j.title}</p>
+                        <p class="text-slate-500">المواعيد: ${j.shift} | الراتب والبدل: ${j.salary}</p>
+                        <button onclick="alert('تم إرسال ملفك الشخصي لإدارة المستشفى!')" class="bg-emerald-600 text-white px-4 py-1.5 rounded font-bold hover:bg-emerald-700">التقديم على الوظيفة</button>
+                    </div>`;
+            });
         }
 
         function switchDoctorTab(t) {
-            ['docSectionChat', 'docSectionReports', 'docSectionRatings', 'docSectionRequests', 'docSectionPeakHours'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            ['docSectionChat', 'docSectionReports', 'docSectionRatings', 'docSectionRequests', 'docSectionPeakHours', 'docSectionJobs'].forEach(s => document.getElementById(s).classList.add('hidden'));
             if(t === 'chat') document.getElementById('docSectionChat').classList.remove('hidden');
             if(t === 'reports') document.getElementById('docSectionReports').classList.remove('hidden');
             if(t === 'ratings') document.getElementById('docSectionRatings').classList.remove('hidden');
             if(t === 'requests') document.getElementById('docSectionRequests').classList.remove('hidden');
             if(t === 'peakHours') document.getElementById('docSectionPeakHours').classList.remove('hidden');
+            if(t === 'jobs') document.getElementById('docSectionJobs').classList.remove('hidden');
         }
 
         /* --- وظائف المريض --- */
@@ -468,16 +653,17 @@
         }
 
         function switchPatientTab(t) {
-            ['patSectionDoctorsList', 'patSectionChat', 'patSectionInstructions', 'patSectionPharmacy', 'patSectionTransport', 'patSectionRating'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            ['patSectionDoctorsList', 'patSectionChat', 'patSectionInstructions', 'patSectionPharmacy', 'patSectionCart', 'patSectionTransport', 'patSectionRating'].forEach(s => document.getElementById(s).classList.add('hidden'));
             if(t === 'doctorsList') document.getElementById('patSectionDoctorsList').classList.remove('hidden');
             if(t === 'chat') document.getElementById('patSectionChat').classList.remove('hidden');
             if(t === 'instructions') document.getElementById('patSectionInstructions').classList.remove('hidden');
             if(t === 'pharmacy') document.getElementById('patSectionPharmacy').classList.remove('hidden');
+            if(t === 'cart') { document.getElementById('patSectionCart').classList.remove('hidden'); updateCartUI(); }
             if(t === 'transport') document.getElementById('patSectionTransport').classList.remove('hidden');
             if(t === 'rating') document.getElementById('patSectionRating').classList.remove('hidden');
         }
 
-        /* --- وظائف الشات والـ Firebase المباشرة --- */
+        /* --- الشات والـ Firebase --- */
         function sendMessageText(text) {
             if(!text.trim()) return;
             database.ref('chats/' + activeRoomId).push({
